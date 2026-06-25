@@ -1,0 +1,90 @@
+CREATE DATABASE test_winfunc;
+USE test_winfunc;
+CREATE TABLE vente(
+    id INT NOT NULL AUTO_INCREMENT,
+    region VARCHAR(25),
+    trimestre INT NOT NULL,
+    montant FLOAT,
+    PRIMARY KEY(id)
+);
+INSERT INTO vente(region,trimestre,montant) VALUES
+
+('Nord',1,100),
+('Sud',1,150),
+('Nord',2,120),
+('Sud',2,90),
+('Nord',3,180),
+('Sud',3,200);
+
+-- SUM() OVER(PARTITION BY region ORDER BY montant) calcule le cumul de vente par région
+SELECT *, 
+	sum(montant) over(partition by region order by montant) AS SommeParRegion
+	FROM fenetre.vente;
+/*
+	id,region,trimestre,montant,CumulSommeParRegion
+	1,Nord,1,100,100
+	3,Nord,2,120,220
+	5,Nord,3,180,400
+	4,Sud,2,90,90
+	2,Sud,1,150,240
+	6,Sud,3,200,440
+*/
+
+---- SUM() OVER(ORDER BY) calcule le montant total  de vente par région
+SELECT *, 
+	sum(montant) over(partition by region) AS SommeParRegion
+	FROM fenetre.vente;
+/*
+id,region,trimestre,montant,SommeParRegion
+	1,Nord,1,100,400
+	3,Nord,2,120,400
+	5,Nord,3,180,400
+	2,Sud,1,150,440
+	4,Sud,2,90,440
+	6,Sud,3,200,440
+*/
+
+-- Window function
+SELECT *
+    FROM (
+        SELECT
+            SUM(profit) OVER (PARTITION BY product ORDER BY profit DESC) AS total
+            ROW_NUMBER() OVER (PARTITION BY product ORDER BY profit DESC) AS row_number
+            FROM sales
+    ) AS temp
+    WHERE t.row_number < 4
+--- Equivalent
+SELECT *
+    FROM (
+        SELECT
+            SUM(profit) OVER w AS total
+            ROW_NUMBER() OVER w AS row_number
+            FROM sales
+            WINDOW w AS (PARTITION BY product ORDER BY profit DESC)
+    ) AS temp
+    WHERE t.row_number < 4
+
+-- Semestre   1)
+SELECT
+    (CASE WHEN DATEPART(quarter,invoice_date) >= 3 THEN 'S2' ELSE 'S1' END) AS semester,
+    SUM(amount) AS revenue
+    FROM invoice
+    WHERE YEAR(invoice_date) = YEAR(GETDATE())
+    GROUP BY (CASE WHEN DATEPART(quarter,invoice_date) >= 3 THEN 'H2' ELSE 'H1' END)  
+
+-- Semestre 2
+SELECT IIF(MONTH(invoiceDate) < 7 ,'H1','H2') AS halbjahr,
+        YEAR(invoiceDate) AS jahr,
+        SUM(amount) AS Umsatz
+        FROM invoice
+        WHERE YEAR(invoiceDate) = YEAR(GETDATE()) - 1  
+        GROUP BY  YEAR(invoiceDate),IIF(MONTH(invoiceDate) <7 ,'H1','H2')
+
+-- Trimestre
+
+SELECT CONCAT('Q',DATEPART(quarter,invoice_date))  AS quarter,
+        YEAR(invoice_date) AS year,
+        SUM(amount) AS revenue
+        FROM invoice
+        WHERE YEAR(invoice_date) = YEAR(GETDATE())
+        GROUP BY  DATEPART(quarter,invoice_date),YEAR(invoice_date) 
