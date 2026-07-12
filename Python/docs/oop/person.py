@@ -16,12 +16,15 @@
 #
 class Person:
     
+   
     #def __init__(self):
     #    pass # pass indique que le block est vide
-    
+    __count: int = 0
+     
     def __init__(self,name ,age):
         self.__name=name 
         self.__age=age 
+        Person.__count += 1
     #Le décorateur @property en Python est un outil puissant qui permet de transformer une méthode (une fonction) 
     #pour qu'elle s'utilise comme une simple variable (un attribut).
     
@@ -43,3 +46,6 @@ class Person:
     def age(self,age):
         self.__age = age
     
+    @classmethod
+    def get_count(cls):
+        return cls.__count
